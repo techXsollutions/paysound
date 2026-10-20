@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.anny.paysound"
+    namespace = "com.techx.paysound"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.anny.paysound"
+        applicationId = "com.techx.paysound"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
