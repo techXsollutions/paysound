@@ -4,16 +4,19 @@ data class Payment(val amount: String, val sender: String?)
 
 object PaymentParser {
 
-    /** Sirf in apps ke notifications dekhe jayenge. Zaroorat ho to yahan aur package add karo. */
+    /**
+     * Default me sirf in apps ke notifications dekhe jayenge.
+     * WhatsApp jaan-boojh kar nahi rakha, kyunki dost chat me "received 500" likh de to bhi bol deta.
+     */
     val allowedPackages = setOf(
         "com.google.android.apps.nbu.paisa.user", // Google Pay
         "com.phonepe.app",                        // PhonePe
         "net.one97.paytm",                        // Paytm
         "in.org.npci.upiapp",                     // BHIM
         "com.amazon.mShop.android.shopping",      // Amazon Pay
-        "com.whatsapp",                           // WhatsApp Pay
         "com.google.android.apps.messaging",      // Google Messages (bank SMS)
         "com.samsung.android.messaging",          // Samsung Messages
+        "com.oneplus.mms",                        // OnePlus Messages
         "com.android.mms"                         // Default SMS
     )
 
@@ -22,6 +25,11 @@ object PaymentParser {
     )
     private val debitWords = listOf(
         "debited", "paid to", "sent to", "you paid", "withdrawn", "spent", "you sent"
+    )
+    // In words wale messages me payment aayi nahi hoti
+    private val skipWords = listOf(
+        "request", "will be credited", "to be credited", "failed", "declined",
+        "pending", "otp", "reversed", "unsuccessful", "not successful"
     )
 
     private val amountRegexes = listOf(
@@ -37,6 +45,8 @@ object PaymentParser {
 
     fun parse(text: String): Payment? {
         val lower = text.lowercase()
+        if (skipWords.any { lower.contains(it) }) return null
+
         val isCredit = creditWords.any { lower.contains(it) }
         val isDebit = debitWords.any { lower.contains(it) }
         if (!isCredit) return null
@@ -66,7 +76,7 @@ object PaymentParser {
         return Payment(clean, sender)
     }
 
-    // Duplicate announcement rokne ke liye (same amount 20 sec ke andar dobara nahi bolega)
+    // Duplicate announcement rokne ke liye (same amount 15 sec ke andar dobara nahi bolega)
     private var lastKey: String = ""
     private var lastTime: Long = 0
 
@@ -74,7 +84,7 @@ object PaymentParser {
     fun isDuplicate(p: Payment): Boolean {
         val key = p.amount
         val now = System.currentTimeMillis()
-        if (key == lastKey && now - lastTime < 20_000) return true
+        if (key == lastKey && now - lastTime < 15_000) return true
         lastKey = key
         lastTime = now
         return false

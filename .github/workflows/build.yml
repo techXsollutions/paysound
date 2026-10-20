@@ -23,11 +23,11 @@ jobs:
         with:
           gradle-version: 8.7
 
-      - name: Build debug APK
-        run: gradle assembleDebug --no-daemon
+      - name: Build signed release APK
+        run: gradle assembleRelease --no-daemon
 
       - name: Rename APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk PaySound.apk
+        run: cp app/build/outputs/apk/release/app-release.apk PaySound.apk
 
       - uses: actions/upload-artifact@v4
         with:

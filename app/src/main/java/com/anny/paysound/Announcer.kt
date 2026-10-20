@@ -9,11 +9,13 @@ import java.util.Locale
 object Announcer {
     private var tts: TextToSpeech? = null
     private var ready = false
+    private var appCtx: Context? = null
     private val pending = ArrayList<Pair<String, String>>()
 
     @Synchronized
     fun speak(context: Context, text: String, lang: String) {
         val app = context.applicationContext
+        appCtx = app
 
         if (Prefs.maxVolume(app)) {
             val am = app.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -27,7 +29,7 @@ object Announcer {
         if (tts == null) {
             pending.add(text to lang)
             tts = TextToSpeech(app) { status ->
-                synchronized(this) {
+                synchronized(Announcer) {
                     ready = status == TextToSpeech.SUCCESS
                     if (ready) {
                         tts?.setAudioAttributes(
@@ -36,7 +38,10 @@ object Announcer {
                                 .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                                 .build()
                         )
-                        pending.forEach { (t, l) -> say(t, l) }
+                        for ((t, l) in pending) say(t, l)
+                    } else {
+                        // Agli baar dobara try ho sake
+                        tts = null
                     }
                     pending.clear()
                 }
@@ -58,6 +63,7 @@ object Announcer {
         if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
             engine.setLanguage(Locale.ENGLISH)
         }
+        appCtx?.let { engine.setSpeechRate(Prefs.rate(it)) }
         engine.speak(text, TextToSpeech.QUEUE_ADD, null, "paysound-" + System.nanoTime())
     }
 
