@@ -22,15 +22,12 @@ class PaymentListenerService : NotificationListenerService() {
             .joinToString(". ")
         if (combined.isBlank()) return
 
-        val payment = PaymentParser.parse(combined) ?: return
-        if (PaymentParser.isDuplicate(payment)) return
+        val parsed = PaymentParser.parse(combined) ?: return
+        if (PaymentParser.isDuplicate(parsed)) return
 
+        val payment = parsed.copy(app = PaymentParser.appName(sbn.packageName))
         Prefs.addHistory(this, payment)
-
-        val lang = Prefs.lang(this)
-        val message = Announcer.buildMessage(payment, lang)
-        Announcer.speak(this, message, lang)
-        if (Prefs.repeatTwice(this)) Announcer.speak(this, message, lang)
+        Announcer.announce(this, payment)
     }
 
     // System kabhi-kabhi listener ko disconnect kar deta hai; wapas jodne ki koshish

@@ -3,17 +3,22 @@ package com.anny.paysound
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioManager
+import android.os.Handler
+import android.os.Looper
 import android.speech.tts.TextToSpeech
 import java.util.Locale
 
 object Announcer {
+    private data class Item(val text: String, val lang: String, val fallback: String)
+
     private var tts: TextToSpeech? = null
     private var ready = false
     private var appCtx: Context? = null
-    private val pending = ArrayList<Pair<String, String>>()
+    private val pending = ArrayList<Item>()
+    private val handler = Handler(Looper.getMainLooper())
 
-    @Synchronized
-    fun speak(context: Context, text: String, lang: String) {
+    /** Poora soundbox flow: volume full, ting tone, phir awaaz. */
+    fun announce(context: Context, p: Payment) {
         val app = context.applicationContext
         appCtx = app
 
@@ -26,8 +31,22 @@ object Announcer {
             )
         }
 
+        val lang = Prefs.lang(app)
+        val item = Item(buildMessage(p, lang, Prefs.speakSender(app)), lang, buildRoman(p, Prefs.speakSender(app)))
+        val times = if (Prefs.repeatTwice(app)) 2 else 1
+
+        if (Prefs.chime(app)) {
+            Chime.play()
+            handler.postDelayed({ repeat(times) { enqueue(app, item) } }, Chime.DURATION_MS + 100)
+        } else {
+            repeat(times) { enqueue(app, item) }
+        }
+    }
+
+    @Synchronized
+    private fun enqueue(app: Context, item: Item) {
         if (tts == null) {
-            pending.add(text to lang)
+            pending.add(item)
             tts = TextToSpeech(app) { status ->
                 synchronized(Announcer) {
                     ready = status == TextToSpeech.SUCCESS
@@ -38,42 +57,60 @@ object Announcer {
                                 .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                                 .build()
                         )
-                        for ((t, l) in pending) say(t, l)
+                        for (i in pending) say(i)
                     } else {
-                        // Agli baar dobara try ho sake
-                        tts = null
+                        tts = null // agli baar dobara try ho
                     }
                     pending.clear()
                 }
             }
             return
         }
-
         if (!ready) {
-            pending.add(text to lang)
+            pending.add(item)
             return
         }
-        say(text, lang)
+        say(item)
     }
 
-    private fun say(text: String, lang: String) {
+    private fun say(item: Item) {
         val engine = tts ?: return
-        val locale = if (lang == "hi") Locale("hi", "IN") else Locale("en", "IN")
-        val result = engine.setLanguage(locale)
-        if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-            engine.setLanguage(Locale.ENGLISH)
+        var toSpeak = item.text
+
+        if (item.lang == "hi") {
+            val r = engine.setLanguage(Locale("hi", "IN"))
+            if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) {
+                // Hindi voice nahi hai: Roman Hindi English voice me bolo, taaki kuch to sunai de
+                engine.setLanguage(Locale("en", "IN"))
+                toSpeak = item.fallback
+            }
+        } else {
+            val r = engine.setLanguage(Locale("en", "IN"))
+            if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) {
+                engine.setLanguage(Locale.ENGLISH)
+            }
         }
         appCtx?.let { engine.setSpeechRate(Prefs.rate(it)) }
-        engine.speak(text, TextToSpeech.QUEUE_ADD, null, "paysound-" + System.nanoTime())
+        engine.speak(toSpeak, TextToSpeech.QUEUE_ADD, null, "paysound-" + System.nanoTime())
     }
 
-    fun buildMessage(p: Payment, lang: String): String {
+    /** Soundbox style: "Paytm पर 500 रुपये प्राप्त हुए" */
+    fun buildMessage(p: Payment, lang: String, withSender: Boolean = false): String {
+        val sender = if (withSender) p.sender else null
         return if (lang == "hi") {
-            if (p.sender != null) "${p.sender} से ${p.amount} रुपये प्राप्त हुए"
-            else "${p.amount} रुपये प्राप्त हुए"
+            val where = if (p.app != null) "${p.app} पर " else ""
+            val from = if (sender != null) "$sender से " else ""
+            "$where$from${p.amount} रुपये प्राप्त हुए"
         } else {
-            if (p.sender != null) "Received ${p.amount} rupees from ${p.sender}"
-            else "Received ${p.amount} rupees"
+            val where = if (p.app != null) " on ${p.app}" else ""
+            val from = if (sender != null) " from $sender" else ""
+            "Received ${p.amount} rupees$from$where"
         }
+    }
+
+    private fun buildRoman(p: Payment, withSender: Boolean): String {
+        val where = if (p.app != null) "${p.app} par " else ""
+        val from = if (withSender && p.sender != null) "${p.sender} se " else ""
+        return "$where$from${p.amount} rupaye prapt hue"
     }
 }

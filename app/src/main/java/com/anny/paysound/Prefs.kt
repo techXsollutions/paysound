@@ -27,6 +27,14 @@ object Prefs {
     fun allApps(c: Context) = sp(c).getBoolean("allApps", false)
     fun setAllApps(c: Context, v: Boolean) = sp(c).edit().putBoolean("allApps", v).apply()
 
+    /** Awaaz se pehle "ting" tone */
+    fun chime(c: Context) = sp(c).getBoolean("chime", true)
+    fun setChime(c: Context, v: Boolean) = sp(c).edit().putBoolean("chime", v).apply()
+
+    /** Bhejne wale ka naam bhi bolo (default band, soundbox sirf amount bolta hai) */
+    fun speakSender(c: Context) = sp(c).getBoolean("speakSender", false)
+    fun setSpeakSender(c: Context, v: Boolean) = sp(c).edit().putBoolean("speakSender", v).apply()
+
     /** Awaaz ki speed: 0..10, default 4 = normal */
     fun rateStep(c: Context) = sp(c).getInt("rateStep", 4)
     fun setRateStep(c: Context, v: Int) = sp(c).edit().putInt("rateStep", v).apply()

@@ -73,6 +73,8 @@ class MainActivity : Activity() {
         root.addView(toggle("Announcement ON", Prefs.enabled(this)) { Prefs.setEnabled(this, it) })
         root.addView(toggle("Volume full kar do", Prefs.maxVolume(this)) { Prefs.setMaxVolume(this, it) })
         root.addView(toggle("Do baar bolo", Prefs.repeatTwice(this)) { Prefs.setRepeatTwice(this, it) })
+        root.addView(toggle("Pehle 'ting' tone bajao", Prefs.chime(this)) { Prefs.setChime(this, it) })
+        root.addView(toggle("Bhejne wale ka naam bhi bolo", Prefs.speakSender(this)) { Prefs.setSpeakSender(this, it) })
         root.addView(toggle("Sabhi apps ke notifications dekho", Prefs.allApps(this)) { Prefs.setAllApps(this, it) })
         root.addView(label("Sabhi apps ON karne par chat me likhe 'received 500' par bhi bol sakta hai.", 11f))
 
@@ -116,8 +118,7 @@ class MainActivity : Activity() {
                         Toast.LENGTH_LONG
                     ).show()
                 } else {
-                    val lang = Prefs.lang(this@MainActivity)
-                    Announcer.speak(this@MainActivity, Announcer.buildMessage(p, lang), lang)
+                    Announcer.announce(this@MainActivity, p.copy(app = "Paytm"))
                 }
             }
         })

@@ -1,6 +1,6 @@
 package com.anny.paysound
 
-data class Payment(val amount: String, val sender: String?)
+data class Payment(val amount: String, val sender: String?, val app: String? = null)
 
 object PaymentParser {
 
@@ -42,6 +42,20 @@ object PaymentParser {
         Regex("""received\s+from\s+([A-Za-z][A-Za-z .]{1,30}?)(?:\s+on|\s+via|\s+to|\s*[.,]|$)""", RegexOption.IGNORE_CASE),
         Regex("""from\s+([A-Za-z][A-Za-z .]{1,30}?)(?:\s+on|\s+via|\s+to|\s*[.,]|$)""", RegexOption.IGNORE_CASE)
     )
+
+    /** Awaaz me bolne ke liye app ka naam */
+    fun appName(pkg: String): String? = when (pkg) {
+        "com.google.android.apps.nbu.paisa.user" -> "Google Pay"
+        "com.phonepe.app" -> "PhonePe"
+        "net.one97.paytm" -> "Paytm"
+        "in.org.npci.upiapp" -> "BHIM"
+        "com.amazon.mShop.android.shopping" -> "Amazon Pay"
+        "com.google.android.apps.messaging",
+        "com.samsung.android.messaging",
+        "com.oneplus.mms",
+        "com.android.mms" -> "Bank"
+        else -> null
+    }
 
     fun parse(text: String): Payment? {
         val lower = text.lowercase()
